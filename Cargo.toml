@@ -2,6 +2,7 @@
 name = "prometheus-exporter"
 version = "0.1.0"
 authors = ["Chris MacNaughton <chris@centaurisolutions.nl>"]
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 futures = "0.1.14"
