@@ -10,7 +10,7 @@ use PrometheusMetric;
 
 #[derive(Clone, Debug)]
 pub struct PrometheusExporter {
-    metrics: Vec<PrometheusMetric>
+    metrics: Vec<PrometheusMetric>,
 }
 
 impl PrometheusExporter {
@@ -28,18 +28,25 @@ impl Service for PrometheusExporter {
     type Error = hyper::Error;
     // The future representing the eventual Response your call will
     // resolve to. This can change to whatever Future you need.
-    type Future = Box<Future<Item=Self::Response, Error=Self::Error>>;
+    type Future = Box<Future<Item = Self::Response, Error = Self::Error>>;
 
     fn call(&self, req: Request) -> Self::Future {
         let mut response = Response::new();
 
-         match (req.method(), req.path()) {
+        match (req.method(), req.path()) {
+            (&Method::Get, "/") => response.set_body(r#"<a href="/metrics">Metrics</a>"#),
             (&Method::Get, "/metrics") => {
-                response.set_body(self.metrics.iter().map(|a| a.to_string()).collect::<Vec<String>>().join("\n"));
-            },
+                response.set_body(
+                    self.metrics
+                        .iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<String>>()
+                        .join("\n"),
+                );
+            }
             _ => {
                 response.set_status(StatusCode::NotFound);
-            },
+            }
         };
 
         Box::new(futures::future::ok(response))
@@ -61,9 +68,7 @@ impl PrometheusExporterBuilder {
 
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port).into();
         let closure_exporter = exporter.clone();
-        let closure = move || {
-            Ok(closure_exporter.clone())
-        };
+        let closure = move || Ok(closure_exporter.clone());
         let server = Http::new().bind(&addr, closure).unwrap();
         server.run().unwrap()
     }

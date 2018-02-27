@@ -1,5 +1,23 @@
 use std::collections::HashMap;
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_builds_a_metric() {
+        let expected = r#"haproxy_backend_bytes_in_total{backend="centauri.solutions"} 1824"#;
+        let metric = PrometheusMetric::new("haproxy_backend_bytes_in_total").with_callback(|| PrometheusValue::Integer(1824) ).with_feature("backend", "centauri.solutions");
+        assert_eq!(expected, metric.to_string());
+    }
+
+    #[test]
+    fn it_builds_a_metric_with_multiple_features() {
+        let expected = r#"node_cpu{cpu="cpu0",mode="user"} 1803.66"#;
+        let metric = PrometheusMetric::new("node_cpu").with_callback(|| PrometheusValue::Float(1803.66) ).with_feature("cpu", "cpu0").with_feature("mode", "user");
+        assert_eq!(expected, metric.to_string());
+    }
+}
 #[derive(Clone, Debug)]
 pub struct PrometheusMetric {
     name: String,
@@ -36,7 +54,7 @@ impl PrometheusMetric {
                 if written {
                     features.push_str(",");
                 }
-                features.push_str(&format!("{key}={value}", key=key, value=value));
+                features.push_str(&format!("{key}=\"{value}\"", key=key, value=value));
                 written = true;
             }
             if written {
@@ -54,13 +72,15 @@ impl PrometheusMetric {
 pub enum PrometheusValue {
     String(String),
     Float(f64),
+    Integer(i64)
 }
 
 impl PrometheusValue {
     pub fn to_string(&self) -> String {
         match self {
             &PrometheusValue::String(ref s) => s.clone(),
-            &PrometheusValue::Float(f) => format!("{:e}", f),
+            &PrometheusValue::Float(f) => format!("{}", f),
+            &PrometheusValue::Integer(i) => format!("{}", i),
         }
     }
 }
