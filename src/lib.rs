@@ -1,5 +1,6 @@
 extern crate hyper;
 extern crate futures;
+extern crate indexmap;
 
 mod exporter;
 mod prometheus_metric;

@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+// use std::collections::HashMap;
+use indexmap::IndexMap;
 
 #[cfg(test)]
 mod tests {
@@ -23,7 +24,7 @@ pub struct PrometheusMetric {
     name: String,
     // value: PrometheusValue,
     callback: Option<Box<fn() -> PrometheusValue>>,
-    features: HashMap<String, String>,
+    features: IndexMap<String, String>,
 }
 
 impl PrometheusMetric {
@@ -31,7 +32,7 @@ impl PrometheusMetric {
         PrometheusMetric {
             name: name.into(),
             callback: None,
-            features: HashMap::new(),
+            features: IndexMap::new(),
         }
     }
 
