@@ -19,11 +19,11 @@ mod tests {
         assert_eq!(expected, metric.to_string());
     }
 }
-#[derive(Clone, Debug)]
+
 pub struct PrometheusMetric {
     name: String,
     // value: PrometheusValue,
-    callback: Option<Box<fn() -> PrometheusValue>>,
+    callback: Option<Box<Fn() -> PrometheusValue>>,
     features: IndexMap<String, String>,
 }
 
@@ -36,7 +36,9 @@ impl PrometheusMetric {
         }
     }
 
-    pub fn with_callback(mut self, callback: fn() -> PrometheusValue) -> Self {
+    pub fn with_callback<F: 'static>(mut self, callback: F) -> Self where
+    // The closure takes no input and returns nothing.
+    F: Fn() -> PrometheusValue {
         self.callback = Some(Box::new(callback));
         self
     }

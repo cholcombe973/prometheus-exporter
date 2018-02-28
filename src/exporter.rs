@@ -1,5 +1,5 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
+use std::sync::{Arc, RwLock};
 use futures;
 use futures::future::Future;
 
@@ -8,9 +8,16 @@ use hyper::server::{Http, Request, Response, Service};
 
 use PrometheusMetric;
 
-#[derive(Clone, Debug)]
 pub struct PrometheusExporter {
-    metrics: Vec<PrometheusMetric>,
+    metrics: Arc<RwLock<Vec<PrometheusMetric>>>,
+}
+
+impl Clone for PrometheusExporter{
+    fn clone(&self) -> Self {
+        PrometheusExporter {
+            metrics: self.metrics.clone()
+        }
+    }
 }
 
 impl PrometheusExporter {
@@ -36,9 +43,9 @@ impl Service for PrometheusExporter {
         match (req.method(), req.path()) {
             (&Method::Get, "/") => response.set_body(r#"<a href="/metrics">Metrics</a>"#),
             (&Method::Get, "/metrics") => {
+                let metrics = self.metrics.read().unwrap();
                 response.set_body(
-                    self.metrics
-                        .iter()
+                        metrics.iter()
                         .map(|a| a.to_string())
                         .collect::<Vec<String>>()
                         .join("\n"),
@@ -75,7 +82,7 @@ impl PrometheusExporterBuilder {
 
     fn into_exporter(self) -> PrometheusExporter {
         PrometheusExporter {
-            metrics: self.metrics,
+            metrics: Arc::new(RwLock::new(self.metrics)),
         }
     }
 }
