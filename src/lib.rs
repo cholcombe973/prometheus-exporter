@@ -4,7 +4,10 @@ extern crate indexmap;
 
 mod exporter;
 mod prometheus_metric;
+mod collector;
 
+
+pub use collector::{MetricCollector, PrometheusMetricCollector};
 pub use exporter::{PrometheusExporter, PrometheusExporterBuilder};
 pub use prometheus_metric::PrometheusMetric;
 pub use prometheus_metric::PrometheusValue;

@@ -1,7 +1,7 @@
 extern crate prometheus_exporter;
 
 use std::sync::{Arc, Mutex};
-use prometheus_exporter::PrometheusExporter as Prometheus;
+use prometheus_exporter::PrometheusExporterBuilder as Prometheus;
 use prometheus_exporter::PrometheusMetric as Metric;
 use prometheus_exporter::PrometheusValue as Value;
 

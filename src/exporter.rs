@@ -6,29 +6,37 @@ use futures::future::Future;
 use hyper::{self, Method, StatusCode};
 use hyper::server::{Http, Request, Response, Service};
 
-use PrometheusMetric;
+use {MetricCollector, PrometheusMetricCollector, PrometheusMetric};
 
-pub struct PrometheusExporter {
-    metrics: Arc<RwLock<Vec<PrometheusMetric>>>,
+pub struct PrometheusExporter<T: MetricCollector> {
+    collector: Box<T>,
 }
 
-impl Clone for PrometheusExporter{
+impl<T: MetricCollector> Clone for PrometheusExporter<T>{
     fn clone(&self) -> Self {
         PrometheusExporter {
-            metrics: self.metrics.clone()
+            collector: self.collector.clone()
         }
     }
 }
 
-impl PrometheusExporter {
-    pub fn new() -> PrometheusExporterBuilder {
-        PrometheusExporterBuilder {
-            metrics: Vec::new(),
+impl<T:'static +  MetricCollector> PrometheusExporter<T> {
+    pub fn with_collector(collector: impl MetricCollector) -> PrometheusExporter<impl MetricCollector> {
+        PrometheusExporter {
+            collector: Box::new(collector),
         }
+    }
+
+    pub fn bind(self, port: u16) {
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port).into();
+        let closure_exporter = self.clone();
+        let closure = move || Ok(closure_exporter.clone());
+        let server = Http::new().bind(&addr, closure).unwrap();
+        server.run().unwrap()
     }
 }
 
-impl Service for PrometheusExporter {
+impl<T: MetricCollector> Service for PrometheusExporter<T> {
     // boilerplate hooking up hyper's server types
     type Request = Request;
     type Response = Response;
@@ -43,9 +51,8 @@ impl Service for PrometheusExporter {
         match (req.method(), req.path()) {
             (&Method::Get, "/") => response.set_body(r#"<a href="/metrics">Metrics</a>"#),
             (&Method::Get, "/metrics") => {
-                let metrics = self.metrics.read().unwrap();
                 response.set_body(
-                        metrics.iter()
+                        self.collector.iter()
                         .map(|a| a.to_string())
                         .collect::<Vec<String>>()
                         .join("\n"),
@@ -65,24 +72,26 @@ pub struct PrometheusExporterBuilder {
 }
 
 impl PrometheusExporterBuilder {
+    pub fn new() -> PrometheusExporterBuilder {
+        PrometheusExporterBuilder {
+            metrics: Vec::new(),
+        }
+    }
+
     pub fn metric(mut self, metric: PrometheusMetric) -> Self {
         self.metrics.push(metric);
         self
     }
 
     pub fn bind(self, port: u16) {
-        let exporter = self.into_exporter();
-
-        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), port).into();
-        let closure_exporter = exporter.clone();
-        let closure = move || Ok(closure_exporter.clone());
-        let server = Http::new().bind(&addr, closure).unwrap();
-        server.run().unwrap()
+        self.into_exporter().bind(port)
     }
 
-    fn into_exporter(self) -> PrometheusExporter {
+    fn into_exporter(self) -> PrometheusExporter<PrometheusMetricCollector> {
         PrometheusExporter {
-            metrics: Arc::new(RwLock::new(self.metrics)),
+            collector: Box::new(
+                PrometheusMetricCollector { metrics: Arc::new(self.metrics) }
+            )
         }
     }
 }
