@@ -1,27 +1,37 @@
 extern crate prometheus_exporter;
 
 use std::sync::{Arc, Mutex};
-use prometheus_exporter::PrometheusExporterBuilder as Prometheus;
-use prometheus_exporter::PrometheusMetric as Metric;
-use prometheus_exporter::PrometheusValue as Value;
+use prometheus_exporter::PrometheusExporter as Prometheus;
+use prometheus_exporter::{PrometheusMetrics, Value};
 
 struct PrometheusHistory {
-    calls: i64,
+    calls: Mutex<i64>,
 }
 
 impl PrometheusHistory {
-    fn exporter_calls(&mut self) -> Value {
-        self.calls += 1;
-        Value::Integer(self.calls)
+    fn exporter_calls(&self) -> Value {
+        if let Ok(mut calls) = self.calls.lock() {
+            *calls += 1;
+            Value::Integer(*calls)
+        } else {
+            Value::Integer(0)
+        }
+    }
+
+    fn new() -> PrometheusHistory {
+        PrometheusHistory {
+            calls: Mutex::new(0),
+        }
     }
 }
 
 fn main() {
-    let history = Arc::new(Mutex::new(PrometheusHistory{calls: 0}));
-    Prometheus::new()
-        .metric(
-            Metric::new("exporter_calls").with_callback(move || {
-                history.lock().unwrap().exporter_calls()
-             } )
-        ).bind(9010);
+    let history = Arc::new(PrometheusHistory::new());
+    let mut metrics = PrometheusMetrics::new();
+    // let
+    // let arc = history.clone();
+    metrics.add_metric("cpu_usage", move || history.exporter_calls());
+    Prometheus::new(
+        metrics
+    ).bind(9010);
 }

@@ -8,38 +8,46 @@ mod tests {
     #[test]
     fn it_builds_a_metric() {
         let expected = r#"haproxy_backend_bytes_in_total{backend="centauri.solutions"} 1824"#;
-        let metric = PrometheusMetric::new("haproxy_backend_bytes_in_total").with_callback(|| PrometheusValue::Integer(1824) ).with_feature("backend", "centauri.solutions");
+        let metric = Metric::new("haproxy_backend_bytes_in_total").with_callback(|| Value::Integer(1824) ).with_feature("backend", "centauri.solutions");
         assert_eq!(expected, metric.to_string());
     }
 
     #[test]
     fn it_builds_a_metric_with_multiple_features() {
         let expected = r#"node_cpu{cpu="cpu0",mode="user"} 1803.66"#;
-        let metric = PrometheusMetric::new("node_cpu").with_callback(|| PrometheusValue::Float(1803.66) ).with_feature("cpu", "cpu0").with_feature("mode", "user");
+        let metric = Metric::new("node_cpu").with_callback(|| Value::Float(1803.66) ).with_feature("cpu", "cpu0").with_feature("mode", "user");
         assert_eq!(expected, metric.to_string());
     }
 }
 
-pub struct PrometheusMetric {
+pub struct Metric {
     name: String,
-    // value: PrometheusValue,
-    callback: Option<Box<Fn() -> PrometheusValue>>,
+    value: Option<Value>,
+    callback: Option<Box<Fn() -> Value>>,
     features: IndexMap<String, String>,
 }
 
-impl PrometheusMetric {
+impl Metric {
     pub fn new<T: Into<String>>(name: T) -> Self {
-        PrometheusMetric {
+        Metric {
             name: name.into(),
+            value: None,
             callback: None,
             features: IndexMap::new(),
         }
     }
 
     pub fn with_callback<F: 'static>(mut self, callback: F) -> Self where
-    // The closure takes no input and returns nothing.
-    F: Fn() -> PrometheusValue {
+    // The closure takes no input and returns a Value.
+    F: Fn() -> Value {
         self.callback = Some(Box::new(callback));
+        self.value = None;
+        self
+    }
+
+    pub fn with_value(mut self, value: Value) -> Self {
+        self.value = Some(value);
+        self.callback = None;
         self
     }
 
@@ -50,7 +58,7 @@ impl PrometheusMetric {
 
     pub fn to_string(&self) -> String {
         let mut s = self.name.clone();
-        if let Some(ref callback) = self.callback {
+        if self.callback.is_some() || self.value.is_some() {
             let mut features = String::new();
             let mut written = false;
             for (ref key, ref value) in &self.features {
@@ -64,26 +72,30 @@ impl PrometheusMetric {
                 s.push_str(&format!("{{{}}}", features));
             }
             s.push_str(" ");
-
-            s.push_str( &callback().to_string() );
+            if let Some(ref callback) = self.callback {
+                s.push_str( &callback().to_string() );
+            }
+            if let Some(ref value) = self.value {
+                s.push_str( &value.to_string() );
+            }
         }
         s
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum PrometheusValue {
+pub enum Value {
     String(String),
     Float(f64),
     Integer(i64)
 }
 
-impl PrometheusValue {
+impl Value {
     pub fn to_string(&self) -> String {
         match self {
-            &PrometheusValue::String(ref s) => s.clone(),
-            &PrometheusValue::Float(f) => format!("{}", f),
-            &PrometheusValue::Integer(i) => format!("{}", i),
+            &Value::String(ref s) => s.clone(),
+            &Value::Float(f) => format!("{}", f),
+            &Value::Integer(i) => format!("{}", i),
         }
     }
 }
