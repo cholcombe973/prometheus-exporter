@@ -26,12 +26,12 @@ impl PrometheusHistory {
 }
 
 fn main() {
-    let history = Arc::new(PrometheusHistory::new());
+    let history = PrometheusHistory::new();
     let mut metrics = PrometheusMetrics::new();
     // let
     // let arc = history.clone();
     metrics.add_metric("visits", move || history.exporter_calls());
     Prometheus::new(
-        metrics
+        Arc::new(metrics)
     ).bind(9010);
 }

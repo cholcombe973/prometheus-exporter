@@ -8,6 +8,12 @@ pub trait Metrics {
     fn metrics(&self) -> Vec<Metric>;
 }
 
+impl<T: Metrics> Metrics for Arc<T> {
+    fn metrics(&self) -> Vec<Metric> {
+        (**self).metrics()
+    }
+}
+
 // #[derive(Clone)]
 pub struct PrometheusMetrics {
     data: Vec<BasicMetric>,
