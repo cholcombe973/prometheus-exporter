@@ -30,7 +30,7 @@ fn main() {
     let mut metrics = PrometheusMetrics::new();
     // let
     // let arc = history.clone();
-    metrics.add_metric("cpu_usage", move || history.exporter_calls());
+    metrics.add_metric("visits", move || history.exporter_calls());
     Prometheus::new(
         metrics
     ).bind(9010);

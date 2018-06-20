@@ -3,12 +3,12 @@ use std::sync::Arc;
 use Metric;
 use Value;
 
-pub trait Metrics: Clone {
+pub trait Metrics {
     // type Item: Into<Metric>;
     fn metrics(&self) -> Vec<Metric>;
 }
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct PrometheusMetrics {
     data: Vec<BasicMetric>,
 }
@@ -26,7 +26,7 @@ impl PrometheusMetrics {
     }
 }
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct BasicMetric {
     name: String,
     // value: Value,
