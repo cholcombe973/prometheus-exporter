@@ -1,4 +1,4 @@
-// use std::collections::HashMap;
+use std::collections::HashMap;
 use indexmap::IndexMap;
 
 #[cfg(test)]
@@ -43,6 +43,21 @@ impl Metric {
         self.callback = Some(Box::new(callback));
         self.value = None;
         self
+    }
+
+    pub fn add_feature<T1: Into<String>, T2: Into<String>>(&mut self, name: T1, value: T2) {
+        self.features.insert(name.into(), value.into());
+    }
+
+    pub fn add_features(&mut self, features: &HashMap<String,String>) {
+        for (name, value) in features.iter(){
+            self.add_feature(name.to_string(), value.to_string());
+        }
+    }
+
+    pub fn add_value(&mut self, value: Value) {
+        self.value = Some(value);
+        self.callback = None;
     }
 
     pub fn with_value(mut self, value: Value) -> Self {
